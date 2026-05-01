@@ -1,7 +1,7 @@
 import { Command } from "@cliffy/command";
 import { Secret, Input } from "@cliffy/prompt";
 import { colors } from "@cliffy/ansi/colors";
-import { hasConfig, saveConfig, initializeSoul, loadConfig } from "./config/user_prefs.ts";
+import { hasConfig, saveConfig, initializeSoul, loadConfig, initializePlaybooks } from "./config/user_prefs.ts";
 import { CodieSpinner } from "./utils/ui.ts";
 import { ChatMessage } from "./core/llm_client.ts";
 import { initDB, addMessage, getHistory, clearSession } from "./core/memory.ts";
@@ -23,10 +23,11 @@ if (import.meta.main) {
   try {
     await new Command()
       .name("codie")
-      .version("0.1.0")
+      .version("1.1.0")
       .description("Tu agente de IA local para ingeniería de software.")
       .action(async () => {
          await initializeSoul();
+         await initializePlaybooks();
          initDB();
          const sessionId = "default";
          

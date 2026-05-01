@@ -4,7 +4,7 @@ export async function executeShell(command: string): Promise<string> {
   const finalCommand = await askPermission(command);
   
   if (!finalCommand) {
-    return "Ejecución abortada por el usuario.";
+    return "El usuario ha denegado la ejecución de este comando. Pregúntale qué desea hacer ahora o propón un comando alternativo.";
   }
 
   try {

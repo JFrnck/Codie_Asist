@@ -67,6 +67,8 @@ export async function chat(
   addMessage(sessionId, responseMessage);
 
   if (choice.finish_reason === "tool_calls" && responseMessage.tool_calls) {
+    payloadMessages.push(responseMessage);
+
     for (const toolCall of responseMessage.tool_calls) {
       CodieSpinner.stop();
       
@@ -87,7 +89,6 @@ export async function chat(
       };
       
       addMessage(sessionId, toolMsg);
-      payloadMessages.push(responseMessage);
       payloadMessages.push(toolMsg);
     }
     

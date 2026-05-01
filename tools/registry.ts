@@ -2,6 +2,8 @@ import { executeShell } from "./system/shell.ts";
 import { leer_archivo, escribir_archivo } from "./system/fs.ts";
 import { createNotionPage } from "./integrations/notion.ts";
 import { readRecentEmails } from "./integrations/gmail.ts";
+import { read_documentation } from "./system/web_reader.ts";
+import { run_background_command, kill_background_process } from "./system/background_jobs.ts";
 
 export const coderTools = [
   {
@@ -56,6 +58,50 @@ export const coderTools = [
           }
         },
         required: ["ruta", "contenido"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_documentation",
+      description: "Usa esta herramienta obligatoriamente cuando necesites leer documentación actualizada desde una URL proporcionada por el usuario o por un Playbook.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "La URL a escanear" }
+        },
+        required: ["url"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "run_background_command",
+      description: "Úsala ÚNICAMENTE para iniciar servidores de desarrollo, watchers, o procesos que no terminan por sí solos (ej. npm run dev). NO la uses para comandos rápidos.",
+      parameters: {
+        type: "object",
+        properties: {
+          command: { type: "string", description: "El comando base a ejecutar" },
+          args: { type: "array", items: { type: "string" }, description: "Argumentos del comando" },
+          cwd: { type: "string", description: "Directorio de trabajo (opcional)" }
+        },
+        required: ["command", "args"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "kill_background_process",
+      description: "Úsala para detener un proceso en segundo plano que iniciaste previamente si el usuario te pide apagar el servidor o liberar el puerto.",
+      parameters: {
+        type: "object",
+        properties: {
+          pid: { type: "number", description: "El Process ID (PID) del proceso a terminar" }
+        },
+        required: ["pid"]
       }
     }
   }
@@ -114,6 +160,12 @@ export async function dispatchTool(name: string, argsStr: string): Promise<strin
         return await createNotionPage(args.title, args.content);
       case "readRecentEmails":
         return await readRecentEmails(args.query, args.maxResults || 5);
+      case "read_documentation":
+        return await read_documentation(args.url);
+      case "run_background_command":
+        return await run_background_command(args.command, args.args, args.cwd);
+      case "kill_background_process":
+        return await kill_background_process(args.pid);
       default:
         return `Error: La herramienta '${name}' no existe en el registro.`;
     }

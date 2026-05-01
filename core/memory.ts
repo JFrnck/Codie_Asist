@@ -40,14 +40,30 @@ export function addMessage(session_id: string, msg: ChatMessage): void {
 
 export function getHistory(session_id: string): ChatMessage[] {
   if (!db) initDB();
-  const rows = db!.prepare(`SELECT role, content, tool_calls, tool_call_id, name FROM messages WHERE session_id = ? ORDER BY id ASC`).all(session_id) as Array<Record<string, unknown>>;
-  return rows.map((row) => {
+  const rows = db!.prepare(`SELECT id, role, content, tool_calls, tool_call_id, name FROM messages WHERE session_id = ? ORDER BY id ASC`).all(session_id) as Array<Record<string, unknown>>;
+  
+  const messages: ChatMessage[] = [];
+  
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
     const msg: ChatMessage = { role: row.role as any, content: row.content as string | null };
     if (row.tool_calls) msg.tool_calls = JSON.parse(row.tool_calls as string);
     if (row.tool_call_id) msg.tool_call_id = row.tool_call_id as string;
     if (row.name) msg.name = row.name as string;
-    return msg;
-  });
+    messages.push(msg);
+  }
+  
+  // Auto-Sanitización (Crash Recovery)
+  if (messages.length > 0) {
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role === "assistant" && lastMsg.tool_calls) {
+      const lastRow = rows[rows.length - 1];
+      db!.prepare(`DELETE FROM messages WHERE id = ?`).run(lastRow.id as number);
+      messages.pop();
+    }
+  }
+
+  return messages;
 }
 
 export function clearSession(session_id: string): void {

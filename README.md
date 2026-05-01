@@ -12,6 +12,13 @@ Codie es un asistente de Inteligencia Artificial ejecutable directamente desde t
 *   **Auto-corrección Silenciosa:** Si Codie ejecuta un comando o intenta leer un archivo que resulta en error (ej. File Not Found), intercepta nativamente ese `stderr` devolviéndoselo a la propia IA para que se auto-corrija automáticamente antes de contestarte.
 *   **Alma ("Soul"):** Codie posee un sistema de configuración de "Alma" guardado en `~/.codie/soul.md`. Es un archivo markdown editable donde puedes forjar directivas maestras personalizadas para el modelo principal.
 
+## Novedades en v1.1.0
+
+*   **Motor Dinámico de Playbooks:** Capacidad de crear e inyectar al vuelo reglas específicas por stack (ej. `frontend_vite_tw4.md`) usando un selector visual interactivo, manteniendo el System Prompt modular.
+*   **Web Surfer (Jina AI):** Herramienta integrada de scraping ligero (`read_documentation`) que le permite a Codie escanear cualquier URL de internet y transformarla a Markdown puro instantáneamente para asimilar documentación externa actualizada.
+*   **Orquestación en Segundo Plano:** Ahora Codie puede lanzar servidores de desarrollo (`npm run dev`), desvincularlos de su ciclo de eventos (detach mode), memorizar su PID, y apagarlos quirúrgicamente usando la API nativa de Deno.
+*   **Crash Recovery (Auto-Sanitización):** Un sistema residente que protege la integridad de tu archivo SQLite. Si interrumpes a Codie abruptamente (`Ctrl+C`), el sistema auto-podará las peticiones huérfanas en el siguiente reinicio para garantizar que OpenAI no lance errores de protocolo (Error 400).
+
 ## Instalación y Configuración
 
 Puedes compilar e instalar Codie usando Deno nativamente en cualquier sistema operativo. Los binarios auto-contenidos quedarán en la carpeta `/bin` de tu directorio de trabajo.

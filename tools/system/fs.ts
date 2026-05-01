@@ -13,7 +13,7 @@ export async function escribir_archivo(ruta: string, contenido: string): Promise
   const permit = await askFileWritePermission(ruta, contenido);
   
   if (!permit) {
-    return `Error: Permiso de escritura en ${ruta} denegado por el usuario.`;
+    return "El usuario ha denegado la ejecución de este comando. Pregúntale qué desea hacer ahora o propón un comando alternativo.";
   }
 
   try {
