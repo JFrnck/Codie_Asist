@@ -1,0 +1,22 @@
+# Archivos compilados y ejecutables
+/bin/
+
+# Archivos temporales o de prueba del usuario
+hola.md
+
+# Variables de entorno (prevención)
+.env
+.env.*
+!.env.example
+
+# Archivos específicos del Sistema Operativo
+.DS_Store
+Thumbs.db
+
+# Carpetas de editores o IDEs
+.vscode/
+.idea/
+*.swp
+
+# La base de datos y la configuración de Codie se guardan inteligentemente en ~/.codie/
+# Por lo que no existe riesgo directo de subir credenciales desde este directorio.
