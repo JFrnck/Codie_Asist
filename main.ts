@@ -23,7 +23,7 @@ if (import.meta.main) {
   try {
     await new Command()
       .name("codie")
-      .version("2.0.0")
+      .version("2.1.0")
       .description("Tu agente de IA local para ingeniería de software.")
       .option("-a, --ai <profile:string>", "Sobrescribe el perfil de IA a utilizar para esta ejecución (ej. openai, openrouter, ollama)")
       .action(async (options) => {
@@ -175,6 +175,21 @@ if (import.meta.main) {
           
         } catch (error) {
           console.error(colors.red("\nHubo un problema al guardar la configuración."));
+          Deno.exit(1);
+        }
+      })
+      .command("learn <file> <tech_name>", "Lee un archivo local y lo memoriza en la base de datos KV de Codie.")
+      .action(async (_options, file: string, tech_name: string) => {
+        try {
+          const content = await Deno.readTextFile(file);
+          const { saveDoc } = await import("./core/knowledge_base.ts");
+          CodieSpinner.start(`Memorizando ${tech_name}...`);
+          await saveDoc(tech_name, content);
+          CodieSpinner.stop();
+          console.log(colors.green(`\n¡Éxito! El archivo '${file}' se ha memorizado bajo la tecnología '${tech_name}'.`));
+        } catch (error) {
+          CodieSpinner.stop();
+          console.error(colors.red(`\nError al aprender el archivo: ${error instanceof Error ? error.message : String(error)}`));
           Deno.exit(1);
         }
       })

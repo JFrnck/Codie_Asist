@@ -2,7 +2,7 @@ import { executeShell } from "./system/shell.ts";
 import { leer_archivo, escribir_archivo } from "./system/fs.ts";
 import { createNotionPage } from "./integrations/notion.ts";
 import { readRecentEmails } from "./integrations/gmail.ts";
-import { read_documentation } from "./system/web_reader.ts";
+import { read_documentation, get_tech_docs, web_search_and_learn } from "./system/web_reader.ts";
 import { run_background_command, kill_background_process } from "./system/background_jobs.ts";
 import { delegate_task } from "./agents/delegator.ts";
 
@@ -79,6 +79,37 @@ export const coderTools = [
           }
         },
         required: ["ruta", "contenido"]
+      }
+    }
+  },
+  {
+    type: "function",
+    safe: true,
+    function: {
+      name: "get_tech_docs",
+      description: "Recupera la documentación de una tecnología desde la Memoria a Largo Plazo (Deno KV). Usa esta herramienta SIEMPRE antes de intentar buscar en internet.",
+      parameters: {
+        type: "object",
+        properties: {
+          tech_name: { type: "string", description: "Nombre de la tecnología (ej. 'react', 'tailwindcss')" }
+        },
+        required: ["tech_name"]
+      }
+    }
+  },
+  {
+    type: "function",
+    safe: false,
+    function: {
+      name: "web_search_and_learn",
+      description: "Lee la documentación desde una URL usando Jina AI y la memoriza permanentemente en Deno KV para consultas futuras.",
+      parameters: {
+        type: "object",
+        properties: {
+          tech_name: { type: "string", description: "Nombre de la tecnología a memorizar (ej. 'nextjs')" },
+          url: { type: "string", description: "URL oficial de la documentación a extraer" }
+        },
+        required: ["tech_name", "url"]
       }
     }
   },
@@ -209,6 +240,10 @@ export async function dispatchTool(name: string, argsStr: string): Promise<strin
         return await createNotionPage(args.title, args.content);
       case "readRecentEmails":
         return await readRecentEmails(args.query, args.maxResults || 5);
+      case "get_tech_docs":
+        return await get_tech_docs(args.tech_name);
+      case "web_search_and_learn":
+        return await web_search_and_learn(args.tech_name, args.url);
       case "read_documentation":
         return await read_documentation(args.url);
       case "run_background_command":

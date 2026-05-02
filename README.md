@@ -12,6 +12,12 @@ Codie es un asistente de Inteligencia Artificial ejecutable directamente desde t
 *   **Auto-corrección Silenciosa:** Si Codie ejecuta un comando o intenta leer un archivo que resulta en error (ej. File Not Found), intercepta nativamente ese `stderr` devolviéndoselo a la propia IA para que se auto-corrija automáticamente antes de contestarte.
 *   **Alma ("Soul"):** Codie posee un sistema de configuración de "Alma" guardado en `~/.codie/soul.md`. Es un archivo markdown editable donde puedes forjar directivas maestras personalizadas para el modelo principal.
 
+## Novedades en V2.1.0 (Memoria a Largo Plazo y Auto-Aprendizaje)
+
+*   **Bóveda de Conocimiento (Deno KV):** Codie ahora posee memoria a largo plazo gracias a una base de datos local súper rápida (`knowledge_vault.db`). Un algoritmo de particionamiento inteligente permite almacenar documentaciones masivas superando los límites estándar de Deno KV.
+*   **Auto-Aprendizaje Seguro (Jina AI):** Cuando le pides una tecnología que no conoce, la herramienta `web_search_and_learn` navega a la web, procesa el Markdown vía Jina AI, pasa por la aduana de seguridad (HITL) y lo guarda permanentemente en su "cerebro".
+*   **Ingestión Manual vía CLI:** Nuevo subcomando global `codie learn <archivo.md> <Tecnología>`. Codie leerá, particionará y memorizará automáticamente tus archivos de configuración privados o reglas de negocio locales, inyectándolas en sus futuros prompts para siempre.
+
 ## Novedades en V2.0.0 (Agent Orchestrator)
 
 *   **Aprobación Diferida (HITL Global):** Seguridad asimétrica centralizada. Codie agrupa múltiples comandos destructivos y solicita tu aprobación global en un único menú interactivo, permitiéndote modificar argumentos JSON antes de ejecutar.
