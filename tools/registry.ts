@@ -4,10 +4,29 @@ import { createNotionPage } from "./integrations/notion.ts";
 import { readRecentEmails } from "./integrations/gmail.ts";
 import { read_documentation } from "./system/web_reader.ts";
 import { run_background_command, kill_background_process } from "./system/background_jobs.ts";
+import { delegate_task } from "./agents/delegator.ts";
 
 export const coderTools = [
   {
     type: "function",
+    safe: false,
+    function: {
+      name: "delegate_task",
+      description: "Delega una tarea analítica o generativa a otro modelo de lenguaje (Sub-Agente) más barato o rápido.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_description: { type: "string", description: "Instrucciones detalladas de la tarea" },
+          input_context: { type: "string", description: "El texto, código o log a analizar" },
+          ai_profile: { type: "string", description: "El ID del perfil de IA a usar (ej. 'gemini', 'openrouter', 'ollama')" }
+        },
+        required: ["task_description", "input_context", "ai_profile"]
+      }
+    }
+  },
+  {
+    type: "function",
+    safe: false,
     function: {
       name: "executeShell",
       description: "Ejecuta un comando de bash en el sistema del usuario. Utilízalo para listar archivos, crear scripts o cualquier operación en la terminal.",
@@ -25,6 +44,7 @@ export const coderTools = [
   },
   {
     type: "function",
+    safe: true,
     function: {
       name: "leer_archivo",
       description: "Lee silenciosamente el contenido de un archivo local. Utilízalo para entender el código fuente antes de modificarlo.",
@@ -42,6 +62,7 @@ export const coderTools = [
   },
   {
     type: "function",
+    safe: false,
     function: {
       name: "escribir_archivo",
       description: "Crea o sobreescribe un archivo en el sistema local. El usuario deberá autorizar esta acción mediante un prompt.",
@@ -63,6 +84,7 @@ export const coderTools = [
   },
   {
     type: "function",
+    safe: true,
     function: {
       name: "read_documentation",
       description: "Usa esta herramienta obligatoriamente cuando necesites leer documentación actualizada desde una URL proporcionada por el usuario o por un Playbook.",
@@ -77,6 +99,7 @@ export const coderTools = [
   },
   {
     type: "function",
+    safe: false,
     function: {
       name: "run_background_command",
       description: "Úsala ÚNICAMENTE para iniciar servidores de desarrollo, watchers, o procesos que no terminan por sí solos (ej. npm run dev). NO la uses para comandos rápidos.",
@@ -93,6 +116,7 @@ export const coderTools = [
   },
   {
     type: "function",
+    safe: false,
     function: {
       name: "kill_background_process",
       description: "Úsala para detener un proceso en segundo plano que iniciaste previamente si el usuario te pide apagar el servidor o liberar el puerto.",
@@ -110,6 +134,24 @@ export const coderTools = [
 export const prodTools = [
   {
     type: "function",
+    safe: false,
+    function: {
+      name: "delegate_task",
+      description: "Delega una tarea analítica o generativa a otro modelo de lenguaje (Sub-Agente) más barato o rápido.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_description: { type: "string", description: "Instrucciones detalladas de la tarea" },
+          input_context: { type: "string", description: "El texto, código o log a analizar" },
+          ai_profile: { type: "string", description: "El ID del perfil de IA a usar (ej. 'gemini', 'openrouter', 'ollama')" }
+        },
+        required: ["task_description", "input_context", "ai_profile"]
+      }
+    }
+  },
+  {
+    type: "function",
+    safe: false,
     function: {
       name: "createNotionPage",
       description: "Crea una página o nota en Notion.",
@@ -125,6 +167,7 @@ export const prodTools = [
   },
   {
     type: "function",
+    safe: true,
     function: {
       name: "readRecentEmails",
       description: "Busca y lee correos recientes en Gmail.",
@@ -139,6 +182,12 @@ export const prodTools = [
     }
   }
 ];
+
+export function isToolSafe(name: string): boolean {
+  const tool = [...coderTools, ...prodTools].find(t => t.function.name === name);
+  // Si no se encuentra, asumimos que no es segura por defecto
+  return tool ? (tool as any).safe : false;
+}
 
 export async function dispatchTool(name: string, argsStr: string): Promise<string> {
   let args;
@@ -166,6 +215,8 @@ export async function dispatchTool(name: string, argsStr: string): Promise<strin
         return await run_background_command(args.command, args.args, args.cwd);
       case "kill_background_process":
         return await kill_background_process(args.pid);
+      case "delegate_task":
+        return await delegate_task(args.task_description, args.input_context, args.ai_profile);
       default:
         return `Error: La herramienta '${name}' no existe en el registro.`;
     }

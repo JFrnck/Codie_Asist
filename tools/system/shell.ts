@@ -1,15 +1,7 @@
-import { askPermission } from "../../utils/security_hitl.ts";
-
 export async function executeShell(command: string): Promise<string> {
-  const finalCommand = await askPermission(command);
-  
-  if (!finalCommand) {
-    return "El usuario ha denegado la ejecución de este comando. Pregúntale qué desea hacer ahora o propón un comando alternativo.";
-  }
-
   try {
     const cmd = new Deno.Command("bash", {
-      args: ["-c", finalCommand],
+      args: ["-c", command],
       stdout: "piped",
       stderr: "piped",
     });

@@ -23,7 +23,7 @@ if (import.meta.main) {
   try {
     await new Command()
       .name("codie")
-      .version("1.2.0")
+      .version("2.0.0")
       .description("Tu agente de IA local para ingeniería de software.")
       .option("-a, --ai <profile:string>", "Sobrescribe el perfil de IA a utilizar para esta ejecución (ej. openai, openrouter, ollama)")
       .action(async (options) => {

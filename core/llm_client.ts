@@ -26,8 +26,13 @@ export async function chat(
   sessionId: string, 
   messages: ChatMessage[], 
   tools: any[], 
-  agentSystemPrompt: string
+  agentSystemPrompt: string,
+  maxSteps: number = 5
 ): Promise<string> {
+  if (maxSteps <= 0) {
+    return "He superado el límite máximo de iteraciones (5) intentando resolver este problema y me he atascado. Por favor, revisa mi historial y dame nuevas instrucciones o aborda el problema de otra manera.";
+  }
+
   const profile = await getActiveProfile();
   const apiKey = Deno.env.get(profile.apiKeyEnvVar) || "";
 
@@ -84,21 +89,62 @@ export async function chat(
   if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
     payloadMessages.push(responseMessage);
 
+    const { isToolSafe } = await import("../tools/registry.ts");
+    
+    const safeTools: ToolCall[] = [];
+    const unsafeTools: ToolCall[] = [];
+    
     for (const toolCall of responseMessage.tool_calls) {
-      CodieSpinner.stop();
-      
-      let result: string;
-      try {
-        result = await dispatchTool(toolCall.function.name, toolCall.function.arguments);
-      } catch (err) {
-        result = `Error crítico de ejecución: ${err instanceof Error ? err.message : String(err)}`;
+      if (isToolSafe(toolCall.function.name)) {
+        safeTools.push(toolCall);
+      } else {
+        unsafeTools.push(toolCall);
       }
-      
+    }
+    
+    const resultsMap = new Map<string, string>();
+    
+    // 1. Ejecutar herramientas seguras inmediatamente
+    for (const toolCall of safeTools) {
+      CodieSpinner.stop();
+      try {
+        const result = await dispatchTool(toolCall.function.name, toolCall.function.arguments);
+        resultsMap.set(toolCall.id, result);
+      } catch (err) {
+        resultsMap.set(toolCall.id, `Error crítico de ejecución: ${err instanceof Error ? err.message : String(err)}`);
+      }
       CodieSpinner.start("Re-analizando resultados...");
+    }
+    
+    // 2. Interceptar y solicitar aprobación para herramientas inseguras
+    if (unsafeTools.length > 0) {
+      CodieSpinner.stop();
+      const { requestUserApproval } = await import("./permission_queue.ts");
+      const isApproved = await requestUserApproval(unsafeTools);
       
+      if (isApproved) {
+        for (const toolCall of unsafeTools) {
+          try {
+            // Nota: Los argumentos pueden haber sido mutados por el usuario en el queue
+            const result = await dispatchTool(toolCall.function.name, toolCall.function.arguments);
+            resultsMap.set(toolCall.id, result);
+          } catch (err) {
+            resultsMap.set(toolCall.id, `Error crítico de ejecución: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        }
+      } else {
+        for (const toolCall of unsafeTools) {
+          resultsMap.set(toolCall.id, "El usuario ha denegado el permiso para ejecutar esta acción. Por favor revisa si quieres proponer otra herramienta.");
+        }
+      }
+      CodieSpinner.start("Re-analizando resultados...");
+    }
+
+    // 3. Empaquetar resultados en el orden original
+    for (const toolCall of responseMessage.tool_calls) {
       const toolMsg: ChatMessage = {
         role: "tool",
-        content: result,
+        content: resultsMap.get(toolCall.id) || "",
         tool_call_id: toolCall.id,
         name: toolCall.function.name
       };
@@ -109,8 +155,68 @@ export async function chat(
     
     // Llamada recursiva con los mensajes actualizados sin duplicar el system
     const updatedMessages = payloadMessages.slice(1);
-    return await chat(sessionId, updatedMessages, tools, agentSystemPrompt);
+    return await chat(sessionId, updatedMessages, tools, agentSystemPrompt, maxSteps - 1);
   }
 
   return responseMessage.content ?? "";
+}
+
+export async function oneShotChat(
+  profileId: string,
+  systemPrompt: string,
+  userInput: string
+): Promise<string> {
+  const { getProfiles } = await import("../config/ai_profiles.ts");
+  const profiles = await getProfiles();
+  const profile = profiles[profileId];
+
+  if (!profile) {
+    throw new Error(`El perfil '${profileId}' no existe en la configuración.`);
+  }
+
+  const apiKey = Deno.env.get(profile.apiKeyEnvVar) || "";
+  let payload: any;
+  const headers: any = { "Content-Type": "application/json" };
+  const endpoint = profile.protocol === "anthropic" ? profile.baseURL : `${profile.baseURL}/chat/completions`;
+
+  const messages: ChatMessage[] = [
+    { role: "user", content: userInput }
+  ];
+
+  if (profile.protocol === "anthropic") {
+    payload = buildAnthropicPayload(profile.model, messages, [], systemPrompt);
+    headers["x-api-key"] = apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+  } else {
+    payload = {
+      model: profile.model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...messages
+      ],
+      temperature: 0.7
+    };
+    headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    throw new Error(`Error del Sub-Agente (${response.status}): ${errorData}`);
+  }
+
+  const data = await response.json();
+  
+  if (profile.protocol === "anthropic") {
+    const responseMessage = parseAnthropicResponse(data);
+    return responseMessage.content ?? "";
+  } else {
+    const choice = data.choices[0];
+    return choice.message.content ?? "";
+  }
 }

@@ -12,12 +12,14 @@ Codie es un asistente de Inteligencia Artificial ejecutable directamente desde t
 *   **Auto-corrección Silenciosa:** Si Codie ejecuta un comando o intenta leer un archivo que resulta en error (ej. File Not Found), intercepta nativamente ese `stderr` devolviéndoselo a la propia IA para que se auto-corrija automáticamente antes de contestarte.
 *   **Alma ("Soul"):** Codie posee un sistema de configuración de "Alma" guardado en `~/.codie/soul.md`. Es un archivo markdown editable donde puedes forjar directivas maestras personalizadas para el modelo principal.
 
-## Novedades en v1.2.0
+## Novedades en V2.0.0 (Agent Orchestrator)
 
-*   **Agente Agnóstico (Multi-Modelo):** Codie ya no está atado a OpenAI. Utiliza el patrón "OpenAI Compatible API" para rutear llamadas de herramientas y streaming a diferentes proveedores.
-*   **Perfiles Dinámicos de IA:** Todo el enrutamiento ahora está orquestado por `~/.codie/profiles.json`, permitiendo cambiar modelos al vuelo sin recompilar. Soporta por defecto `openai` (GPT-4o), `openrouter` (Claude 3.7), `gemini` (Gemini 1.5 Pro) y `ollama` (Qwen local).
-*   **Adaptador Nativo de Anthropic:** Si decides no usar OpenRouter, Codie incluye un "Patrón Adaptador" puro que traduce toda la estructura de la aplicación nativamente hacia la API de Anthropic, permitiendo usar `--ai claude` directamente contra los servidores de Claude manteniendo la compatibilidad estricta.
-*   **Mega-Setup Interactivo:** El comando `codie setup` ha sido refactorizado para solicitar interactivamente y almacenar en la bóveda las llaves maestras de OpenAI, OpenRouter, Gemini y Anthropic, inyectándolas en caliente en el entorno virtual.
+*   **Aprobación Diferida (HITL Global):** Seguridad asimétrica centralizada. Codie agrupa múltiples comandos destructivos y solicita tu aprobación global en un único menú interactivo, permitiéndote modificar argumentos JSON antes de ejecutar.
+*   **Bucle ReAct (Auto-Corrección):** Capacidad de iteración y razonamiento profundo con límite de seguridad (`maxSteps`). Codie detecta fallos silenciosamente, procesa el `stderr` en memoria y usa nuevas herramientas para reparar errores sin interrumpir al usuario.
+*   **Delegación Multi-Agente:** El Orquestador inyecta un sub-agente (ej. `Gemini`, `Ollama`) vía la herramienta `delegate_task` para tareas simples, salvaguardando los créditos de modelos costosos como Claude 3.5 Sonnet. Todo contenido en cajas negras aisladas.
+*   **Despliegue CLI Global:** Puedes invocar `codie` en cualquier directorio gracias a la instalación nativa usando `deno install`.
+*   **Perfil Agnóstico Completamente Dinámico:** Soporte nativo para Claude y APIs compatibles con OpenAI.
+*   **Mega-Setup:** Configura desde la consola todas tus API keys en una bóveda segura (`~/.codie/config.json`).
 
 ## Novedades en v1.1.0
 

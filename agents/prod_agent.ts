@@ -7,7 +7,11 @@ export async function executeProdTask(sessionId: string, history: ChatMessage[])
   const soul = await getSoul();
   const playbook = await selectPlaybook("prod");
   
-  let systemPrompt = `${soul}\n\n[CONTEXTO ESPECIALIZADO: PROD AGENT]\nEres un asistente ejecutivo y Product Manager experto en productividad y organización. Tu trabajo es gestionar correos y organizar notas o tareas en Notion para liberar de carga al usuario.`;
+  const { getProfiles } = await import("../config/ai_profiles.ts");
+  const profiles = await getProfiles();
+  const profileKeys = Object.keys(profiles).join(", ");
+  
+  let systemPrompt = `${soul}\n\n[CONTEXTO ESPECIALIZADO: PROD AGENT]\nEres un asistente ejecutivo y Product Manager experto en productividad y organización. Tu trabajo es gestionar correos y organizar notas o tareas en Notion para liberar de carga al usuario.\n\n[ORQUESTACIÓN DE SUB-AGENTES]\nTienes a tu disposición los siguientes perfiles de IA para delegar tareas usando delegate_task: [${profileKeys}]. Elige el modelo más barato/rápido para tareas repetitivas o analíticas aisladas (ej. procesar y resumir un texto largo con Gemini) y reserva tu propio poder cognitivo para orquestar la solución principal.`;
   
   if (playbook) {
     systemPrompt += `\n\n[DIRECTIVA DE PLAYBOOK ACTIVA]\n${playbook}`;

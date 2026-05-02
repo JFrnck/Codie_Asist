@@ -1,5 +1,6 @@
 {
   "tasks": {
+    "install": "deno run -A install.ts",
     "dev": "deno run --allow-env --allow-read --allow-write --allow-net --allow-run --allow-ffi --watch main.ts",
     "build:mac": "deno compile --allow-env --allow-read --allow-write --allow-net --allow-run --allow-ffi -o bin/codie-mac --target x86_64-apple-darwin main.ts",
     "build:mac-m1": "deno compile --allow-env --allow-read --allow-write --allow-net --allow-run --allow-ffi -o bin/codie-mac-m1 --target aarch64-apple-darwin main.ts",
