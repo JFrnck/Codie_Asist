@@ -12,6 +12,12 @@ Codie es un asistente de Inteligencia Artificial ejecutable directamente desde t
 *   **Auto-corrección Silenciosa:** Si Codie ejecuta un comando o intenta leer un archivo que resulta en error (ej. File Not Found), intercepta nativamente ese `stderr` devolviéndoselo a la propia IA para que se auto-corrija automáticamente antes de contestarte.
 *   **Alma ("Soul"):** Codie posee un sistema de configuración de "Alma" guardado en `~/.codie/soul.md`. Es un archivo markdown editable donde puedes forjar directivas maestras personalizadas para el modelo principal.
 
+## Novedades en V2.2.0 (UX Terminal: Syntax Highlighting & Editor Bridge)
+
+*   **Syntax Highlighting en Terminal:** Las respuestas de Codie ahora renderizan bloques de código con colores de sintaxis reales (TypeScript, JSON, Bash, etc.) directamente en la terminal, gracias al motor `cli-highlight`. Texto en **negrita**, *itálica* y `código inline` también se formatea visualmente.
+*   **Puente a VS Code (`/edit`):** Escribe `/edit` o `/code` en el prompt para abrir VS Code con un archivo temporal. Pega código masivo, guarda y cierra la pestaña — Codie captura el contenido y lo envía a la IA. Cascada de editores resiliente: `code` → `$EDITOR` → `nano` → `vim`.
+*   **Echo Seguro del Input:** Para prompts cortos (< 10 líneas), la CLI limpia el texto crudo y lo repinta con Syntax Highlighting aplicado. Para bloques grandes, se omite la limpieza ANSI para proteger el historial de scroll de la terminal.
+
 ## Novedades en V2.1.0 (Memoria a Largo Plazo y Auto-Aprendizaje)
 
 *   **Bóveda de Conocimiento (Deno KV):** Codie ahora posee memoria a largo plazo gracias a una base de datos local súper rápida (`knowledge_vault.db`). Un algoritmo de particionamiento inteligente permite almacenar documentaciones masivas superando los límites estándar de Deno KV.
