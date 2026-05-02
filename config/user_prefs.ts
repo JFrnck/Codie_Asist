@@ -2,7 +2,10 @@ import { join } from "@std/path";
 import { exists, ensureDir } from "@std/fs";
 
 export interface CodieConfig {
-  apiKey: string;
+  apiKey?: string;
+  openrouterKey?: string;
+  geminiKey?: string;
+  claudeKey?: string;
   notionApiKey?: string;
   gmailClientId?: string;
   gmailClientSecret?: string;

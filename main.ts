@@ -23,9 +23,29 @@ if (import.meta.main) {
   try {
     await new Command()
       .name("codie")
-      .version("1.1.0")
+      .version("1.2.0")
       .description("Tu agente de IA local para ingeniería de software.")
-      .action(async () => {
+      .option("-a, --ai <profile:string>", "Sobrescribe el perfil de IA a utilizar para esta ejecución (ej. openai, openrouter, ollama)")
+      .action(async (options) => {
+         if (options.ai) {
+             const { setActiveProfile } = await import("./config/ai_profiles.ts");
+             await setActiveProfile(options.ai);
+         }
+         
+         const config = await loadConfig();
+         if (config.apiKey) {
+             Deno.env.set("OPENAI_API_KEY", config.apiKey);
+         }
+         if (config.openrouterKey) {
+             Deno.env.set("OPENROUTER_API_KEY", config.openrouterKey);
+         }
+         if (config.geminiKey) {
+             Deno.env.set("GEMINI_API_KEY", config.geminiKey);
+         }
+         if (config.claudeKey) {
+             Deno.env.set("ANTHROPIC_API_KEY", config.claudeKey);
+         }
+
          await initializeSoul();
          await initializePlaybooks();
          initDB();
@@ -84,17 +104,31 @@ if (import.meta.main) {
 
         const openaiMsg = existingConfig?.apiKey 
           ? `Ingresa tu API Key de OpenAI (Enter para mantener la actual: ${existingConfig.apiKey.slice(0, 7)}***):`
-          : "Ingresa tu API Key de OpenAI (Obligatorio):";
+          : "Ingresa tu API Key de OpenAI (Presiona Enter para omitir):";
 
-        const apiKeyInput = await Secret.prompt({
-          message: openaiMsg,
-          validate: (val) => {
-            if (val.length > 0) return true;
-            if (existingConfig?.apiKey) return true;
-            return "La API Key principal no puede estar vacía.";
-          },
-        });
+        const apiKeyInput = await Secret.prompt({ message: openaiMsg });
         const finalApiKey = apiKeyInput || existingConfig?.apiKey;
+
+        const openrouterMsg = existingConfig?.openrouterKey 
+          ? `Ingresa tu API Key de OpenRouter (Enter para mantener la actual: ${existingConfig.openrouterKey.slice(0, 7)}***):`
+          : "Ingresa tu API Key de OpenRouter (Presiona Enter para omitir):";
+
+        const openrouterInput = await Secret.prompt({ message: openrouterMsg });
+        const finalOpenrouterKey = openrouterInput || existingConfig?.openrouterKey;
+
+        const geminiMsg = existingConfig?.geminiKey 
+          ? `Ingresa tu API Key de Gemini (Enter para mantener la actual: ${existingConfig.geminiKey.slice(0, 7)}***):`
+          : "Ingresa tu API Key de Gemini (Presiona Enter para omitir):";
+
+        const geminiInput = await Secret.prompt({ message: geminiMsg });
+        const finalGeminiKey = geminiInput || existingConfig?.geminiKey;
+
+        const claudeMsg = existingConfig?.claudeKey 
+          ? `Ingresa tu API Key nativa de Claude (Enter para mantener la actual: ${existingConfig.claudeKey.slice(0, 7)}***):`
+          : "Ingresa tu API Key nativa de Claude (Presiona Enter para omitir):";
+
+        const claudeInput = await Secret.prompt({ message: claudeMsg });
+        const finalClaudeKey = claudeInput || existingConfig?.claudeKey;
 
         const notionMsg = existingConfig?.notionApiKey
           ? `Ingresa tu API Key de Notion (Enter para mantener la actual: ${existingConfig.notionApiKey.slice(0, 7)}***):`
@@ -125,12 +159,20 @@ if (import.meta.main) {
 
         try {
           await saveConfig({ 
-            apiKey: finalApiKey, 
+            apiKey: finalApiKey || undefined, 
+            openrouterKey: finalOpenrouterKey || undefined,
+            geminiKey: finalGeminiKey || undefined,
+            claudeKey: finalClaudeKey || undefined,
             notionApiKey: finalNotionApiKey || undefined, 
             gmailClientId: finalGmailClientId || undefined,
             gmailClientSecret: finalGmailClientSecret || undefined
           });
           console.log(colors.green("\n¡Configuración guardada exitosamente en ~/.codie/config.json!"));
+          
+          // Crear profiles.json por defecto si no existe
+          const { getProfiles } = await import("./config/ai_profiles.ts");
+          await getProfiles();
+          
         } catch (error) {
           console.error(colors.red("\nHubo un problema al guardar la configuración."));
           Deno.exit(1);

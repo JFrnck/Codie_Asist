@@ -1,7 +1,9 @@
+import { getActiveProfile } from "../config/ai_profiles.ts";
 import { loadConfig } from "../config/user_prefs.ts";
 import { dispatchTool } from "../tools/registry.ts";
 import { addMessage } from "./memory.ts";
 import { CodieSpinner } from "../utils/ui.ts";
+import { buildAnthropicPayload, parseAnthropicResponse } from "./anthropic_adapter.ts";
 
 export interface ToolCall {
   id: string;
@@ -26,31 +28,38 @@ export async function chat(
   tools: any[], 
   agentSystemPrompt: string
 ): Promise<string> {
-  const config = await loadConfig();
+  const profile = await getActiveProfile();
+  const apiKey = Deno.env.get(profile.apiKeyEnvVar) || "";
+
+  let payload: any;
+  const headers: any = { "Content-Type": "application/json" };
+  const endpoint = profile.protocol === "anthropic" ? profile.baseURL : `${profile.baseURL}/chat/completions`;
 
   const payloadMessages: ChatMessage[] = [
     { role: "system", content: agentSystemPrompt },
     ...messages
   ];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const payload: any = {
-    model: "gpt-4o-mini",
-    messages: payloadMessages,
-    temperature: 0.7
-  };
-
-  if (tools && tools.length > 0) {
-    payload.tools = tools;
-    payload.tool_choice = "auto";
+  if (profile.protocol === "anthropic") {
+    payload = buildAnthropicPayload(profile.model, messages, tools, agentSystemPrompt);
+    headers["x-api-key"] = apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+  } else {
+    payload = {
+      model: profile.model,
+      messages: payloadMessages,
+      temperature: 0.7
+    };
+    if (tools && tools.length > 0) {
+      payload.tools = tools;
+      payload.tool_choice = "auto";
+    }
+    headers["Authorization"] = `Bearer ${apiKey}`;
   }
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch(endpoint, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${config.apiKey}`
-    },
+    headers,
     body: JSON.stringify(payload)
   });
 
@@ -60,13 +69,19 @@ export async function chat(
   }
 
   const data = await response.json();
-  const choice = data.choices[0];
-  const responseMessage = choice.message as ChatMessage;
+  let responseMessage: ChatMessage;
+
+  if (profile.protocol === "anthropic") {
+    responseMessage = parseAnthropicResponse(data);
+  } else {
+    const choice = data.choices[0];
+    responseMessage = choice.message as ChatMessage;
+  }
   
   // Guardar respuesta inicial del asistente (con content o tool_calls)
   addMessage(sessionId, responseMessage);
 
-  if (choice.finish_reason === "tool_calls" && responseMessage.tool_calls) {
+  if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
     payloadMessages.push(responseMessage);
 
     for (const toolCall of responseMessage.tool_calls) {

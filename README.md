@@ -12,6 +12,13 @@ Codie es un asistente de Inteligencia Artificial ejecutable directamente desde t
 *   **Auto-corrección Silenciosa:** Si Codie ejecuta un comando o intenta leer un archivo que resulta en error (ej. File Not Found), intercepta nativamente ese `stderr` devolviéndoselo a la propia IA para que se auto-corrija automáticamente antes de contestarte.
 *   **Alma ("Soul"):** Codie posee un sistema de configuración de "Alma" guardado en `~/.codie/soul.md`. Es un archivo markdown editable donde puedes forjar directivas maestras personalizadas para el modelo principal.
 
+## Novedades en v1.2.0
+
+*   **Agente Agnóstico (Multi-Modelo):** Codie ya no está atado a OpenAI. Utiliza el patrón "OpenAI Compatible API" para rutear llamadas de herramientas y streaming a diferentes proveedores.
+*   **Perfiles Dinámicos de IA:** Todo el enrutamiento ahora está orquestado por `~/.codie/profiles.json`, permitiendo cambiar modelos al vuelo sin recompilar. Soporta por defecto `openai` (GPT-4o), `openrouter` (Claude 3.7), `gemini` (Gemini 1.5 Pro) y `ollama` (Qwen local).
+*   **Adaptador Nativo de Anthropic:** Si decides no usar OpenRouter, Codie incluye un "Patrón Adaptador" puro que traduce toda la estructura de la aplicación nativamente hacia la API de Anthropic, permitiendo usar `--ai claude` directamente contra los servidores de Claude manteniendo la compatibilidad estricta.
+*   **Mega-Setup Interactivo:** El comando `codie setup` ha sido refactorizado para solicitar interactivamente y almacenar en la bóveda las llaves maestras de OpenAI, OpenRouter, Gemini y Anthropic, inyectándolas en caliente en el entorno virtual.
+
 ## Novedades en v1.1.0
 
 *   **Motor Dinámico de Playbooks:** Capacidad de crear e inyectar al vuelo reglas específicas por stack (ej. `frontend_vite_tw4.md`) usando un selector visual interactivo, manteniendo el System Prompt modular.
