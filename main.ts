@@ -52,62 +52,78 @@ if (import.meta.main) {
          initDB();
          const sessionId = "default";
          
-         console.log(colors.bold.green("Codie inicializado. Escribe 'exit', 'quit' o 'clear' para limpiar el historial.\n"));
+         console.log(colors.bold.green("Codie inicializado.") + colors.gray(" Comandos: 'exit' | 'clear' | '/edit' (abre VS Code para código largo)\n"));
 
          while (true) {
-           console.log(colors.bold.cyan("Tú ") + colors.gray("[Escribe o pega tu código. Presiona Enter 2 veces en una línea vacía para enviar]:"));
-           
-           const lines: string[] = [];
-           let consecutiveEmptyLines = 0;
-           let promptsDrawn = 1; // 1 por el encabezado
-           
-           while (true) {
-             const line = prompt(colors.gray("│ "));
-             
-             if (line === null) {
-               // EOF (Ctrl+D)
-               console.log(); // Salto de línea limpio ya que Ctrl+D no lo produce
-               promptsDrawn++;
-               break;
-             }
-             
-             promptsDrawn++;
-             
-             if (line.trim() === "") {
-               consecutiveEmptyLines++;
-               if (consecutiveEmptyLines >= 2) {
-                 if (lines.length > 0) {
-                   lines.splice(lines.length - 1, 1);
-                 }
-                 break;
-               }
-             } else {
-               consecutiveEmptyLines = 0;
-             }
-             
-             lines.push(line);
-           }
-           
-           const text = lines.join("\n").trim();
-           
-           if (!text) {
-             // Limpiar la pantalla si el input fue vacío
-             for (let i = 0; i < promptsDrawn; i++) {
-               Deno.stdout.writeSync(new TextEncoder().encode('\x1B[1A\x1B[2K'));
-             }
-             continue;
-           }
+           const userInput = await Input.prompt({
+             message: colors.bold.cyan("Tú:"),
+           });
 
-           // --- ECHO DE SEGURIDAD (FASE 6 / MULTILINE) ---
-           if (promptsDrawn < 25) {
-             for (let i = 0; i < promptsDrawn; i++) {
-               Deno.stdout.writeSync(new TextEncoder().encode('\x1B[1A\x1B[2K'));
+           const trimmedInput = userInput.trim();
+           if (!trimmedInput) continue;
+           
+           let text = "";
+
+           if (trimmedInput.toLowerCase() === "/edit" || trimmedInput.toLowerCase() === "/code") {
+             CodieSpinner.start("Abriendo editor externo...");
+             const tempPath = await Deno.makeTempFile({ suffix: ".md" });
+             await Deno.writeTextFile(tempPath, "<!-- Pega tu código masivo aquí. Guarda y cierra la pestaña/editor para enviar a Codie -->\n\n");
+             
+             let editorLaunched = false;
+             const editors = ["code", Deno.env.get("EDITOR"), "nano", "vim"].filter(Boolean) as string[];
+             
+             CodieSpinner.stop();
+             console.log(colors.gray("Esperando a que cierres el editor..."));
+             
+             for (const editor of editors) {
+               try {
+                 const args = editor === "code" ? ["--wait", tempPath] : [tempPath];
+                 const cmd = new Deno.Command(editor, { args, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+                 const output = await cmd.output();
+                 if (output.success) {
+                   editorLaunched = true;
+                   break;
+                 }
+               } catch (_e) {
+                 // Continuar intentando con el siguiente editor
+               }
              }
-             // Reimprimir el texto formateado
-             console.log(`${colors.bold.cyan("Tú:")}\n${renderMarkdown(text)}\n`);
+             
+             if (!editorLaunched) {
+               console.error(colors.red("\nError: No se pudo lanzar ningún editor (code, $EDITOR, nano, vim).\n"));
+               await Deno.remove(tempPath).catch(() => {});
+               continue;
+             }
+             
+             const rawEditorContent = await Deno.readTextFile(tempPath);
+             await Deno.remove(tempPath).catch(() => {});
+             
+             text = rawEditorContent.split("\n")
+               .filter(line => !line.startsWith("<!-- Pega tu código masivo aquí"))
+               .join("\n").trim();
+             
+             if (!text) {
+               console.log(colors.yellow("Envío cancelado (el archivo estaba vacío)."));
+               continue;
+             }
+             
+             console.log(`\n${colors.bold.cyan("Tú (vía Editor):")}\n${renderMarkdown(text)}\n`);
+           } else {
+             text = trimmedInput;
+             
+             // --- ECHO DE SEGURIDAD (FASE 6 / SHORT INPUT) ---
+             const linesCount = text.split("\n").length;
+             if (linesCount < 10) {
+               // Subimos 1 línea para borrar el prompt original de Cliffy y N líneas por el contenido
+               // (En Cliffy, el texto presionado con Enter baja 1 línea el cursor)
+               for (let i = 0; i <= linesCount; i++) {
+                 Deno.stdout.writeSync(new TextEncoder().encode('\x1B[1A\x1B[2K'));
+               }
+               // Reimprimir el texto formateado
+               console.log(`\n${colors.bold.cyan("Tú:")}\n${renderMarkdown(text)}\n`);
+             }
+             // Si es >= 10 líneas, lo dejamos crudo en la terminal por seguridad.
            }
-           // Si es >= 25 líneas, lo dejamos crudo en la terminal por seguridad.
-           // ----------------------------------
            
            if (text.toLowerCase() === "exit" || text.toLowerCase() === "quit") {
              console.log(colors.gray("Hasta luego."));
