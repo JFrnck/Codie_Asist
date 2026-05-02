@@ -20,3 +20,6 @@ Thumbs.db
 
 # La base de datos y la configuración de Codie se guardan inteligentemente en ~/.codie/
 # Por lo que no existe riesgo directo de subir credenciales desde este directorio.
+
+# Archivos del sistema del asistente
+.antigravity/
