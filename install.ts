@@ -4,7 +4,7 @@ async function install() {
   console.log(colors.bold.cyan("🚀 Instalando Codie CLI de forma global..."));
 
   const cmd = new Deno.Command("deno", {
-    args: ["install", "--global", "--allow-all", "--config", "deno.json", "--name", "codie", "--force", "main.ts"],
+    args: ["install", "--global", "--allow-all", "--unstable-kv", "--config", "deno.json", "--name", "codie", "--force", "main.ts"],
     stdout: "piped",
     stderr: "piped",
   });
