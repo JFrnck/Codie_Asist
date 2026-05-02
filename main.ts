@@ -3,6 +3,7 @@ import { Secret, Input } from "@cliffy/prompt";
 import { colors } from "@cliffy/ansi/colors";
 import { hasConfig, saveConfig, initializeSoul, loadConfig, initializePlaybooks } from "./config/user_prefs.ts";
 import { CodieSpinner } from "./utils/ui.ts";
+import { renderMarkdown } from "./utils/highlighter.ts";
 import { ChatMessage } from "./core/llm_client.ts";
 import { initDB, addMessage, getHistory, clearSession } from "./core/memory.ts";
 import { route } from "./core/router.ts";
@@ -54,12 +55,59 @@ if (import.meta.main) {
          console.log(colors.bold.green("Codie inicializado. Escribe 'exit', 'quit' o 'clear' para limpiar el historial.\n"));
 
          while (true) {
-           const userInput = await Input.prompt({
-             message: colors.bold.cyan("Tú:"),
-           });
+           console.log(colors.bold.cyan("Tú ") + colors.gray("[Escribe o pega tu código. Presiona Enter 2 veces en una línea vacía para enviar]:"));
+           
+           const lines: string[] = [];
+           let consecutiveEmptyLines = 0;
+           let promptsDrawn = 1; // 1 por el encabezado
+           
+           while (true) {
+             const line = prompt(colors.gray("│ "));
+             
+             if (line === null) {
+               // EOF (Ctrl+D)
+               console.log(); // Salto de línea limpio ya que Ctrl+D no lo produce
+               promptsDrawn++;
+               break;
+             }
+             
+             promptsDrawn++;
+             
+             if (line.trim() === "") {
+               consecutiveEmptyLines++;
+               if (consecutiveEmptyLines >= 2) {
+                 if (lines.length > 0) {
+                   lines.splice(lines.length - 1, 1);
+                 }
+                 break;
+               }
+             } else {
+               consecutiveEmptyLines = 0;
+             }
+             
+             lines.push(line);
+           }
+           
+           const text = lines.join("\n").trim();
+           
+           if (!text) {
+             // Limpiar la pantalla si el input fue vacío
+             for (let i = 0; i < promptsDrawn; i++) {
+               Deno.stdout.writeSync(new TextEncoder().encode('\x1B[1A\x1B[2K'));
+             }
+             continue;
+           }
 
-           const text = userInput.trim();
-           if (!text) continue;
+           // --- ECHO DE SEGURIDAD (FASE 6 / MULTILINE) ---
+           if (promptsDrawn < 25) {
+             for (let i = 0; i < promptsDrawn; i++) {
+               Deno.stdout.writeSync(new TextEncoder().encode('\x1B[1A\x1B[2K'));
+             }
+             // Reimprimir el texto formateado
+             console.log(`${colors.bold.cyan("Tú:")}\n${renderMarkdown(text)}\n`);
+           }
+           // Si es >= 25 líneas, lo dejamos crudo en la terminal por seguridad.
+           // ----------------------------------
            
            if (text.toLowerCase() === "exit" || text.toLowerCase() === "quit") {
              console.log(colors.gray("Hasta luego."));
@@ -82,7 +130,7 @@ if (import.meta.main) {
              const response = await route(text, sessionId, history);
              
              CodieSpinner.stop();
-             console.log(`\n${colors.bold.green("Codie:")} ${response}\n`);
+             console.log(`\n${colors.bold.green("Codie:")}\n${renderMarkdown(response)}\n`);
            } catch (err) {
              CodieSpinner.stop();
              console.error(colors.red(`\nError: ${err instanceof Error ? err.message : String(err)}\n`));
